@@ -180,3 +180,16 @@ class GRBLController:
         print(f"Movement response: {response}")
         return True
     
+    def get_status(self):
+        """Get current machine status"""
+        response = self.send_command("?")
+        if response:
+            print(f"Status: {response}")
+        return response
+    
+    def emergency_stop(self):
+        """Send emergency stop command"""
+        print("EMERGENCY STOP!")
+        self.send_command("!")
+        time.sleep(0.5)
+        self.send_command("\x18")  # Ctrl-X reset
