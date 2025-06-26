@@ -3,7 +3,7 @@
 Interactive command line interface for controlling the CNC Controller
 NOTE: THIS IS DESIGNED FOR A MACHINE THAT DOES NOT HAVE AN X-AXIS
 """
-from grbl_controller import GRBLController
+from grblhal_controller import GRBLController
 
 def main():
     controller = GRBLController()
