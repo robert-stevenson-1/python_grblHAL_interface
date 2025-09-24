@@ -74,6 +74,7 @@ class GRBLController:
         """Disconnect from the controller"""
         if self.serial_conn and self.serial_conn.is_open:
             self.serial_conn.close()
+            self.port = None
             print("Disconnected from controller")
     
     def send_command(self, command):
