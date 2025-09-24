@@ -193,3 +193,11 @@ class GRBLController:
         self.send_command("!")
         time.sleep(0.5)
         self.send_command("\x18")  # Ctrl-X reset
+
+    def reset_controller(self):
+        """Send soft reset command to controller"""
+        print("Resetting controller...")
+        response = self.send_command("\x18")  # Ctrl-X soft reset
+        time.sleep(1)  # Give controller time to reset
+        print(f"Reset response: {response}")
+        return response

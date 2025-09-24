@@ -11,13 +11,16 @@ def main():
     print("=== GRBLhal Controller ===")
     print("Commands:")
     print("  connect - Connect to controller")
+    print("  disconnect - Disconnect from controller")
     print("  home [Y|Z|YZ] - Home axes")
     print("  speed <rate> - Set feed rate (mm/min)")
     print("  move <Y|Z> <distance> - Move axis by distance")
     print("  rapid <Y|Z> <distance> - Rapid move axis")
     print("  status - Get machine status")
+    print("  reset - Soft reset controller")
     print("  stop - Emergency stop")
     print("  quit - Exit program")
+    print("  help - Show this menu")
     print()
     
     try:
@@ -34,6 +37,8 @@ def main():
                 break
             elif cmd == "connect":
                 controller.connect()
+            elif cmd == "disconnect":
+                controller.disconnect()
             elif cmd == "home":
                 axes = command[1] if len(command) > 1 else "YZ"
                 controller.home_axes(axes)
@@ -54,8 +59,26 @@ def main():
                 controller.move_axis(command[1], command[2], rapid=True)
             elif cmd == "status":
                 controller.get_status()
+            elif cmd == "reset":
+                controller.reset_controller()
             elif cmd == "stop":
                 controller.emergency_stop()
+            elif cmd == "help":
+                print("=== GRBLhal Controller ===")
+                print("Commands:")
+                print("  connect - Connect to controller")
+                print("  disconnect - Disconnect from controller")
+                print("  home [Y|Z|YZ] - Home axes")
+                print("  speed <rate> - Set feed rate (mm/min)")
+                print("  move <Y|Z> <distance> - Move axis by distance")
+                print("  rapid <Y|Z> <distance> - Rapid move axis")
+                print("  status - Get machine status")
+                print("  reset - Soft reset controller")
+                print("  stop - Emergency stop")
+                print("  quit - Exit program")
+                print("  help - Show this menu")
+                print()
+                
             else:
                 print(f"Unknown command: {cmd}")
     
