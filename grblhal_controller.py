@@ -160,7 +160,7 @@ class GRBLController:
             return False
         
         try:
-            distance = float(distance)
+            distance = -1*float(distance)
         except ValueError:
             print("Invalid distance! Please enter a number.")
             return False
