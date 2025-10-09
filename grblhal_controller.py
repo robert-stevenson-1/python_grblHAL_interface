@@ -131,11 +131,11 @@ class GRBLController:
             return False
         
         # NOTE: This user interaction could be removed if intergrate into a better/autonomous system 
-        print("WARNING: Ensure the machine is clear of obstacles!")
-        confirm = input("Continue with homing? (y/n): ")
-        if confirm.lower() != 'y':
-            print("Homing cancelled")
-            return False
+        # print("WARNING: Ensure the machine is clear of obstacles!")
+        # confirm = input("Continue with homing? (y/n): ")
+        # if confirm.lower() != 'y':
+        #     print("Homing cancelled")
+        #     return False
         
         response = self.send_command(command)
         print(f"Homing response: {response}")
@@ -160,7 +160,7 @@ class GRBLController:
             return False
         
         try:
-            distance = -1*float(distance)
+            distance = float(distance)
         except ValueError:
             print("Invalid distance! Please enter a number.")
             return False
@@ -176,7 +176,7 @@ class GRBLController:
         else:
             command = f"{move_type} {axis}{distance} F{self.feed_rate}" # this feedrate is from setting it before in this program
         
-        print(f"Moving {axis} axis by {distance}mm...")
+        print(f"Moving {axis} axis to absolute position {distance}mm...")
         response = self.send_command(command)
         print(f"Movement response: {response}")
         return True
@@ -202,3 +202,171 @@ class GRBLController:
         time.sleep(1)  # Give controller time to reset
         print(f"Reset response: {response}")
         return response
+    
+    def interactive_session(self):
+        """
+        Start an interactive session for sending raw commands to the controller.
+        Useful for testing custom G-code and grblHAL commands directly.
+        """
+        if not self.serial_conn or not self.serial_conn.is_open:
+            print("Not connected to controller! Please connect first.")
+            return False
+        
+        print("\n=== Interactive Command Session ===")
+        print("Send raw G-code and grblHAL commands directly to the controller")
+        print("Examples: G0 Y10, G1 Z5 F500, $ (view settings), $H (home)")
+        print("Type 'exit' or 'quit' to return to main menu")
+        print("Type 'help' for common commands")
+        print()
+        
+        try:
+            while True:
+                # Use a different prompt to show we're in interactive mode
+                cmd = input("grbl> ").strip()
+                
+                if not cmd:
+                    continue
+                
+                # Check for exit commands
+                if cmd.lower() in ['exit', 'quit', 'q']:
+                    print("Exiting interactive session...")
+                    break
+                
+                # Show help for common commands
+                if cmd.lower() == 'help':
+                    print("\nCommon grblHAL commands:")
+                    print("  ?           - Get status")
+                    print("  $          - View all settings")
+                    print("  $#          - View coordinate offsets")
+                    print("  $G          - View parser state")
+                    print("  $I          - View build info")
+                    print("  $N          - View startup blocks")
+                    print("  $H          - Home all axes")
+                    print("  $HY / $HZ   - Home individual axis")
+                    print("  $X          - Unlock (after alarm)")
+                    print("  ~           - Resume from feed hold")
+                    print("  !           - Feed hold")
+                    print("  G0 Y10      - Rapid move Y axis to 10mm")
+                    print("  G1 Z-5 F500 - Linear move Z down 5mm at 500mm/min")
+                    print("  G90         - Absolute positioning mode")
+                    print("  G91         - Relative positioning mode")
+                    print("  M3 S1000    - Start spindle at 1000 RPM (if applicable)")
+                    print("  M5          - Stop spindle")
+                    print()
+                    continue
+                
+                # Send the raw command
+                response = self.send_command(cmd)
+                if response:
+                    print(f"Response: {response}")
+                else:
+                    print("No response received")
+        
+        except KeyboardInterrupt:
+            print("\nInteractive session interrupted")
+        
+        print("Returned to main menu\n")
+        return True
+
+    def get_current_position(self):
+        """Get current machine position from status"""
+        response = self.send_command("?")
+        if response and 'MPos:' in response:
+            # Parse position from status response like: <Idle|MPos:0.000,10.000,5.000|...>
+            try:
+                pos_start = response.index('MPos:') + 5
+                pos_end = response.index('|', pos_start)
+                positions = response[pos_start:pos_end].split(',')
+                # Assuming Y is second, Z is third (no X-axis)
+                return {'Y': float(positions[1]), 'Z': float(positions[2])}
+            except (ValueError, IndexError):
+                print("Could not parse position from response")
+                return None
+        return None
+
+    def run_test_routine(self):
+        """
+        Run a test routine:
+        1. Reset controller and home axes
+        2. Move Y axis to position 80 at rate 4000 mm/min
+        3. Wait until position is reached
+        4. Set rate to 443 mm/min and move to position 650
+        5. Move back to position 80 at rate 4000 mm/min
+        """
+        print("\n=== Starting Test Routine ===\n")
+        
+        if not self.serial_conn or not self.serial_conn.is_open:
+            print("ERROR: Not connected to controller!")
+            return False
+        
+        # Step 1: Reset and home
+        print("Step 1: Resetting controller and homing axes...")
+        self.reset_controller()
+        time.sleep(2)
+        
+        # Home without user confirmation
+        print("Homing Y and Z axes...")
+        response = self.home_axes()
+        print(f"Homing response: {response}")
+        
+        # Wait for homing to complete by checking status
+        print("Waiting for homing to complete...")
+        start_time = time.time()
+        while time.time() - start_time < 95: # HOMING take a max time of 90 secs (95s is safe)
+            pos = self.get_current_position()
+            if pos is not None and pos["Y"] == 0.0 and pos["Z"] == 0 : # check to see if our position are y = 0mm and z = 0mm, if true exit the waiting
+                print(f"Homing finished early @ \n{pos}")
+                break  # Condition met
+            time.sleep(0.1)  # Check every 100ms
+        print("Homing finished")
+        
+        # Step 3: move and wait till in camara scan init position
+        print("moving into initial pos")
+        self.set_feed_rate(4000)
+        # move to scan init pos
+        self.move_axis("Y", 80.0)
+
+        # wait till we at init position
+        while time.time() - start_time < 95:
+            pos = self.get_current_position()
+            if pos is not None and pos["Y"] == 80.0 and pos["Z"] == 0 : # check to see if our position are y = 0mm and z = -758mm, if true exit the waiting
+                print("At initial position early")
+                break  # Condition met
+            time.sleep(0.1)  # Check every 100ms
+        print("At initial position")
+        
+        # Step 4: Set rate to 443 and move to 650
+        print("\nStep 4: Moving to Y position 650mm at 443mm/min...")
+        # set speed to match frame rate of camera
+        self.set_feed_rate(443.33)
+
+        ## START CAMERA CAPTURE
+        print(f"!!! START CAMERA CAPTURE !!!")
+
+        # move so that we do a full bed scan
+        self.move_axis("Y", 650.0)
+        # wait till we at do a full bed scan
+        while time.time() - start_time < 95:
+            pos = self.get_current_position()
+            if pos is not None and pos["Y"] == 650.0 and pos["Z"] == 0 : # check to see if our position are y = 0mm and z = -758mm, if true exit the waiting
+                print("Finished Full bed scan early")
+                break  # Condition met
+            time.sleep(0.1)  # Check every 100ms
+        print("Full bed scann finished")
+
+        print("\nStep 5: Moving back to Y position 80mm at 4000mm/min...")
+        print("move back into initial pos")
+        self.set_feed_rate(4000)
+        # move to scan init pos
+        self.move_axis("Y", 80.0)
+
+        # wait till we at init position
+        while time.time() - start_time < 95:
+            pos = self.get_current_position()
+            if pos is not None and pos["Y"] == 80.0 and pos["Z"] == 0 : # check to see if our position are y = 0mm and z = -758mm, if true exit the waiting
+                print("Back to initial position early early")
+                break  # Condition met
+            time.sleep(0.1)  # Check every 100ms
+        
+        print("\n=== Test Routine Completed Successfully ===\n")
+        return True

@@ -12,10 +12,13 @@ def main():
     print("Commands:")
     print("  connect - Connect to controller")
     print("  disconnect - Disconnect from controller")
+    print("  interactive - Start interactive command session")
+    print("  routine - Run automated test routine")
     print("  home [Y|Z|YZ] - Home axes")
     print("  speed <rate> - Set feed rate (mm/min)")
     print("  move <Y|Z> <distance> - Move axis by distance")
     print("  rapid <Y|Z> <distance> - Rapid move axis")
+    print("  position - Get current position")
     print("  status - Get machine status")
     print("  reset - Soft reset controller")
     print("  stop - Emergency stop")
@@ -39,6 +42,10 @@ def main():
                 controller.connect()
             elif cmd == "disconnect":
                 controller.disconnect()
+            elif cmd == "interactive":
+                controller.interactive_session()
+            elif cmd == "routine":
+                controller.run_test_routine()
             elif cmd == "home":
                 axes = command[1] if len(command) > 1 else "YZ"
                 controller.home_axes(axes)
@@ -57,6 +64,12 @@ def main():
                     print("Usage: rapid <Y|Z> <distance>")
                     continue
                 controller.move_axis(command[1], command[2], rapid=True)
+            elif cmd == "position":
+                pos = controller.get_current_position()
+                if pos:
+                    print(f"Current Position - Y: {pos['Y']}mm, Z: {pos['Z']}mm")
+                else:
+                    print("Could not retrieve position")
             elif cmd == "status":
                 controller.get_status()
             elif cmd == "reset":
@@ -68,10 +81,13 @@ def main():
                 print("Commands:")
                 print("  connect - Connect to controller")
                 print("  disconnect - Disconnect from controller")
+                print("  interactive - Start interactive command session")
+                print("  routine - Run automated test routine")
                 print("  home [Y|Z|YZ] - Home axes")
                 print("  speed <rate> - Set feed rate (mm/min)")
                 print("  move <Y|Z> <distance> - Move axis by distance")
                 print("  rapid <Y|Z> <distance> - Rapid move axis")
+                print("  position - Get current position")
                 print("  status - Get machine status")
                 print("  reset - Soft reset controller")
                 print("  stop - Emergency stop")
