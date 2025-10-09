@@ -346,6 +346,7 @@ class GRBLController:
 
         ## START CAMERA CAPTURE
         print(f"!!! START CAMERA CAPTURE !!!")
+        # TODO: Run Camera capture function
 
         # move so that we do a full bed scan
         self.move_axis("Y", scan_pos)
